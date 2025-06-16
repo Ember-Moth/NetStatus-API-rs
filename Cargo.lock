@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "NetStatus-api-rs"
+name = "NetStatus-API-rs"
 version = "0.1.0"
 dependencies = [
  "actix-limitation",

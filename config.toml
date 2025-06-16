@@ -1,4 +1,4 @@
-port = 8080
+listen = "0.0.0.0:8080"
 api_timeout = 3000
 tcping_timeout = 1000
 rate_limit = 60

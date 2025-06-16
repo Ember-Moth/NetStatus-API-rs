@@ -4,7 +4,7 @@ use std::path::Path;
 
 #[derive(Deserialize, Clone)]
 pub struct ApiConfig {
-    pub port: u16,
+    pub listen: String,
     pub api_timeout: u64,      // 单位：毫秒
     pub tcping_timeout: u64,   // 单位：毫秒
     pub rate_limit: u32,
@@ -12,7 +12,7 @@ pub struct ApiConfig {
 
 pub fn load_config(config_path: &str) -> Result<ApiConfig, String> {
     let mut builder = Config::builder()
-        .set_default("port", 8080)
+        .set_default("listen", "0.0.0.0:8080")
         .map_err(|e| format!("Failed to set default port: {}", e))?
         .set_default("api_timeout", 3000)
         .map_err(|e| format!("Failed to set default api_timeout: {}", e))?

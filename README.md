@@ -60,13 +60,13 @@ cargo build --release
 ## 📄 配置文件示例（`config.toml`）
 
 ```toml
-port = 8080
+listen = "0.0.0.0:8080"
 api_timeout = 3000
 tcping_timeout = 1000
 rate_limit = 60
 ```
 
-- `port`: 启动服务的端口号
+- `listen`: 监听地址
 - `api_timeout`: HTTP 请求超时时间（毫秒）
 - `tcping_timeout`: TCP 连接超时时间（毫秒）
 - `rate_limit`: 每分钟允许的请求次数（全局）

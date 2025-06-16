@@ -32,7 +32,7 @@ async fn main() -> std::io::Result<()> {
     let settings = match config::load_config(&config_path) {
         Ok(cfg) => {
             info!("Configuration loaded successfully");
-            Arc::new(cfg)  // 注意这里是 Arc<ApiConfig>
+            Arc::new(cfg)  // Arc<ApiConfig>
         }
         Err(e) => {
             error!("Failed to load configuration: {}", e);
@@ -40,11 +40,11 @@ async fn main() -> std::io::Result<()> {
         }
     };
 
-    let port = settings.port;
+    let listen_addr = settings.listen.clone(); // ✅ 避免 borrow 问题
     let api_timeout = settings.api_timeout;
     let rate_limit = settings.rate_limit;
 
-    // 构建限速器（不使用键）
+    // 构建限速器
     let non_zero_rate_limit = NonZeroU32::new(rate_limit).unwrap_or_else(|| NonZeroU32::new(60).unwrap());
     let limiter: Arc<Mutex<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>> =
         Arc::new(Mutex::new(RateLimiter::direct(Quota::per_minute(non_zero_rate_limit))));
@@ -55,7 +55,7 @@ async fn main() -> std::io::Result<()> {
         let settings = settings.clone();
 
         App::new()
-            .app_data(web::Data::new(settings.clone()))  // 传入 Data<Arc<ApiConfig>>
+            .app_data(web::Data::new(settings.clone()))
             .wrap(middleware::Logger::default())
             .wrap(middleware::DefaultHeaders::new().add(("Content-Type", "application/json")))
             .wrap(middleware::Compress::default())
@@ -64,7 +64,6 @@ async fn main() -> std::io::Result<()> {
                 let fut = srv.call(req);
 
                 async move {
-                    // 限速检查
                     let allow = {
                         let limiter = limiter.lock().unwrap();
                         limiter.check().is_ok()
@@ -74,7 +73,6 @@ async fn main() -> std::io::Result<()> {
                         return Err(actix_web::error::ErrorTooManyRequests("Rate limit exceeded"));
                     }
 
-                    // 包裹请求处理为超时
                     timeout(Duration::from_millis(api_timeout), fut)
                         .await
                         .unwrap_or_else(|_| Err(actix_web::error::ErrorRequestTimeout("Request timed out")))
@@ -83,10 +81,10 @@ async fn main() -> std::io::Result<()> {
             .service(web::scope("/v1").route("/tcping", web::get().to(api::tcping_v1)))
     });
 
-    let server = server.bind(("0.0.0.0", port))?.run();
+    let server = server.bind(&listen_addr)?.run();
     let server_handle = server.handle();
 
-    // 信号处理（Unix）
+    // Unix 平台信号处理
     #[cfg(unix)]
     {
         use tokio::signal::unix::{signal, SignalKind};
@@ -102,7 +100,7 @@ async fn main() -> std::io::Result<()> {
         });
     }
 
-    // 信号处理（Windows）
+    // Windows 平台信号处理
     #[cfg(windows)]
     {
         let server_handle = server_handle.clone();
@@ -116,6 +114,6 @@ async fn main() -> std::io::Result<()> {
         });
     }
 
-    info!("Server running on port {}", port);
+    info!("Server running on {}", listen_addr);
     server.await
 }
