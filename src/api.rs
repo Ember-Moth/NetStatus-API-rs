@@ -24,7 +24,7 @@ pub struct TcpingParams {
 
 pub async fn tcping_v1(
     params: web::Query<TcpingParams>,
-    config: web::Data<Arc<ApiConfig>>,  // 这里改成 Data<Arc<ApiConfig>>
+    config: web::Data<Arc<ApiConfig>>,
 ) -> HttpResponse {
     // 参数校验
     if let Err(e) = params.validate() {

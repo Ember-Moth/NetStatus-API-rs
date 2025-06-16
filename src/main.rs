@@ -15,12 +15,10 @@ use actix_web::dev::Service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // 初始化日志
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    // 解析配置路径参数
     let args: Vec<String> = std::env::args().collect();
     let config_path = args
         .iter()
@@ -28,7 +26,6 @@ async fn main() -> std::io::Result<()> {
         .and_then(|i| args.get(i + 1).cloned())
         .unwrap_or_else(|| String::from("default_config.toml"));
 
-    // 加载配置
     let settings = match config::load_config(&config_path) {
         Ok(cfg) => {
             info!("Configuration loaded successfully");
@@ -40,16 +37,14 @@ async fn main() -> std::io::Result<()> {
         }
     };
 
-    let listen_addr = settings.listen.clone(); // ✅ 避免 borrow 问题
+    let listen_addr = settings.listen.clone();
     let api_timeout = settings.api_timeout;
     let rate_limit = settings.rate_limit;
 
-    // 构建限速器
     let non_zero_rate_limit = NonZeroU32::new(rate_limit).unwrap_or_else(|| NonZeroU32::new(60).unwrap());
     let limiter: Arc<Mutex<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>> =
         Arc::new(Mutex::new(RateLimiter::direct(Quota::per_minute(non_zero_rate_limit))));
 
-    // 构建 HTTP Server
     let server = HttpServer::new(move || {
         let limiter = limiter.clone();
         let settings = settings.clone();
